@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+
+# My Automated Arch Install
+
+# Settings
+INSTALL_DISK=vda
+INSTALL_PART_PREFIX=              # p for /dev/nvme*n*p*, leave empty for /dev/sd** or /dev/vd**
+INSTALL_SWAP_SIZE=24G             # For example 24G, for hibernation use 1.5 times RAM size
+
+# Check for root
+if [ "$EUID" -ne 0 ]; then
+    echo "Please run as root"
+    exit
+fi
+
+# exit when any command fails
+set -exuo pipefail
+
+parted --script --align=optimal "/dev/$INSTALL_DISK" -- \
+    mklabel gpt \
+    mkpart primary fat32 0G 1G \
+    set 1 esp on \
+    mkpart primary ext4 1G -${INSTALL_SWAP_SIZE} \
+    mkpart primary linux-swap -${INSTALL_SWAP_SIZE} 100%
+
+# Formatting partiotion 1 for EFI FAT
+mkfs.fat -F 32 -n boot "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}1"
+
+# Formatting partiotion 2 for ext4 root
+mkfs.ext4 -L arch_os "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2"
+
+# Partitioning device 3 for swap
+mkswap -L swap "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}3"
+
+# mount all the filesystems
+mount -L arch_os /mnt
+mount -L boot --mkdir /mnt/boot
+swapon -L swap
+
+# Speed up downloading of pacstrap and enable colors
+sed -i 's/^#\(ParallelDownloads\).*$/\1 = 5/' /etc/pacman.conf
+sed -i 's/^#Color/Color/' /etc/pacman.conf
+
+# start installing all the things
+pacstrap -K /mnt \
+  base linux-lts linux-firmware amd-ucode kernel-modules-hook \
+  mesa vulkan-radeon libva-mesa-driver mesa-vdpau \
+  nano sudo gnome gnome-themes-extra gnome-tweaks plymouth networkmanager \
+  base-devel git 
+
+# generate fstab
+genfstab -L /mnt >>/mnt/etc/fstab
+
+echo "Done preparing the disk"
+echo "Run arch-chroot part inside arch-chroot to finish installation"
+echo -n
+echo "For example:"
+echo "     cp /root/my-archinstall-arch-chroot /mnt/root/my-archinstall-arch-chroot"
+echo "     arch-chroot /mnt -- /root/my-archinstall-arch-chroot"
+echo -n
