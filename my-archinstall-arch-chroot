@@ -77,21 +77,8 @@ sed -i 's/^#Color/Color/' /etc/pacman.conf
 # Configure makepkg
 sed -i 's/^#\(MAKEFLAGS\).*$/\1="--jobs \$\(nproc\)"/' /etc/makepkg.conf
 
-# Set up for AUR and install yay
-mkdir "/home/$INSTALL_USERNAME/build"
-cd "/home/$INSTALL_USERNAME/build"
-git clone https://aur.archlinux.org/yay.git
-cd yay
-makepkg -si
-
-# Install some more packages
-yay -S pacman-backup-hook pacman-cleanup-hook informant ttf-ms-win11-auto etc-update
-
 # Setup nano as default text editor
 echo EDITOR=nano >> /etc/environment
-
-# Setup informant
-usermod -a -G informant $INSTALL_USERNAME
 
 echo "Done Installing the arch-chroot part"
 echo -n
