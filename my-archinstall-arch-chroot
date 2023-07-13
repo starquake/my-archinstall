@@ -85,7 +85,10 @@ cd yay
 makepkg -si
 
 # Install some more packages
-yay -S pacman-backup-hook pacman-cleanup-hook informant ttf-ms-win11-auto
+yay -S pacman-backup-hook pacman-cleanup-hook informant ttf-ms-win11-auto etc-update
+
+# Setup nano as default text editor
+echo EDITOR=nano >> /etc/environment
 
 # Setup informant
 usermod -a -G informant $INSTALL_USERNAME
