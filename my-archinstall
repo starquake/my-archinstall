@@ -7,6 +7,8 @@ INSTALL_DISK=vda
 INSTALL_PART_PREFIX=              # p for /dev/nvme*n*p*, leave empty for /dev/sd** or /dev/vd**
 INSTALL_SWAP_SIZE=24G             # For example 24G, for hibernation use 1.5 times RAM size
 
+echo "Starquake Automated Arch Install"
+
 # Check for root
 if [ "$EUID" -ne 0 ]; then
     echo "Please run as root"
