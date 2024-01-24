@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-
 # My Automated Arch Install
+# Run this script using:
+#
+#    /bin/bash -c "$(curl -fsSL https://install.linuxeverywhere.org/my-archinstall)"
 
 # Settings
 INSTALL_DISK=vda
 INSTALL_PART_PREFIX=              # p for /dev/nvme*n*p*, leave empty for /dev/sd** or /dev/vd**
 INSTALL_SWAP_SIZE=24G             # For example 24G, for hibernation use 1.5 times RAM size
+INSTALL_HOSTNAME=rowlf
+INSTALL_USERNAME=starquake
 
 # Check for root
 if [ "$EUID" -ne 0 ]; then
@@ -13,48 +17,145 @@ if [ "$EUID" -ne 0 ]; then
     exit
 fi
 
-# exit when any command fails
+# Exit when any command fails
 set -exuo pipefail
 
 parted --script --align=optimal "/dev/$INSTALL_DISK" -- \
     mklabel gpt \
     mkpart primary fat32 0G 1G \
     set 1 esp on \
-    mkpart primary ext4 1G -${INSTALL_SWAP_SIZE} \
-    mkpart primary linux-swap -${INSTALL_SWAP_SIZE} 100%
+    mkpart primary ext4 1G 100%
 
-# Formatting partiotion 1 for EFI FAT
+# Formatting partition 1 for EFI FAT
 mkfs.fat -F 32 -n boot "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}1"
 
-# Formatting partiotion 2 for ext4 root
-mkfs.ext4 -L arch_os "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2"
+# Setup encryption on partition 2:
+cryptsetup luksFormat "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2"
 
-# Partitioning device 3 for swap
-mkswap -L swap "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}3"
+# Open the container:
+cryptsetup open "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2" cryptlvm
 
-# mount all the filesystems
-mount -L arch_os /mnt
+# Create Physical Volume
+pvcreate /dev/mapper/cryptlvm
+
+# Create VolumeGroup
+vgcreate vg1 /dev/mapper/cryptlvm
+
+# Create Logical Volume swap
+lvcreate -L ${INSTALL_SWAP_SIZE} vg1 -n swap
+
+# Create Logical Volume root
+lvcreate -l 100%FREE vg1 -n root
+
+# Setup volume 1 to be used for swap
+mkswap -L swap "/dev/vg1/swap"
+
+# Formatting volume 2 for ext4 root
+mkfs.ext4 "/dev/vg1/root"
+
+# Mount all the filesystems
+mount /dev/vg1/root /mnt
 mount -L boot --mkdir /mnt/boot
 swapon -L swap
 
-# Speed up downloading of pacstrap and enable colors
-sed -i 's/^#\(ParallelDownloads\).*$/\1 = 5/' /etc/pacman.conf
-sed -i 's/^#Color/Color/' /etc/pacman.conf
+## Speed up downloading of pacstrap and enable colors
+#sed -i 's/^#\(ParallelDownloads\).*$/\1 = 5/' /etc/pacman.conf
+#sed -i 's/^#Color/Color/' /etc/pacman.conf
 
-# start installing all the things
+# Start installing all the things
 pacstrap -K /mnt \
-  base linux-lts linux-firmware amd-ucode kernel-modules-hook \
-  mesa vulkan-radeon libva-mesa-driver mesa-vdpau \
+  base linux-lts linux-firmware intel-ucode amd-ucode kernel-modules-hook \
+  mesa \
+  vulkan-intel intel-media-driver \
+  vulkan-radeon libva-mesa-driver mesa-vdpau \
   nano sudo gnome gnome-themes-extra gnome-tweaks plymouth networkmanager \
   base-devel git 
 
-# generate fstab
+# Generate fstab
 genfstab -L /mnt >>/mnt/etc/fstab
 
-echo "Done preparing the disk"
-echo "Run arch-chroot part inside arch-chroot to finish installation"
-echo -n
-echo "For example:"
-echo "     cp /root/my-archinstall-arch-chroot /mnt/root/my-archinstall-arch-chroot"
-echo "     arch-chroot /mnt -- /root/my-archinstall-arch-chroot"
-echo -n
+# Configure Time-related settings
+arch-chroot /mnt ln -sf /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime
+arch-chroot /mnt hwclock --systohc
+
+# Set up locales
+tee /mnt/etc/locale.gen >/dev/null <<EOF
+en_US.UTF-8 UTF-8
+nl_NL.UTF-8 UTF-8
+EOF
+arch-chroot /mnt locale-gen
+echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
+
+# Set hostname
+echo $INSTALL_HOSTNAME >/mnt/etc/hostname
+
+# Configure and run mkinitcpio
+sed -i 's/^HOOKS=(\(.*\))$/HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck plymouth)/' /mnt/etc/mkinitcpio.conf
+arch-chroot /mnt mkinitcpio -P
+
+# Add the first user
+arch-chroot /mnt useradd -m -G wheel ${INSTALL_USERNAME}
+
+# Allow members of group wheel to execute any command
+tee /mnt/etc/sudoers.d/allow_wheel_group >/dev/null <<EOF
+## allow members of group wheel to execute any command
+%wheel ALL=(ALL:ALL) ALL
+EOF
+
+# Add SSH_AUTH_SOCK to env_keep
+tee /mnt/etc/sudoers.d/ssh_auth_sock >/dev/null <<EOF
+Defaults env_keep+=SSH_AUTH_SOCK
+EOF
+
+UUID=$(blkid -s UUID -o value "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2")
+
+# Install systemd-boot loader
+arch-chroot /mnt bootctl install
+
+# Enable systemd-boot update service
+arch-chroot /mnt systemctl enable systemd-boot-update.service
+
+# Enable some more services
+arch-chroot /mnt systemctl enable gdm
+arch-chroot /mnt systemctl enable NetworkManager
+arch-chroot /mnt systemctl enable fstrim.timer
+
+tee /mnt/boot/loader/loader.conf >/dev/null <<EOF
+default  arch-lts.conf
+# timeout  0
+EOF
+
+tee /mnt/boot/loader/entries/arch-lts.conf >/dev/null <<EOF
+title   Arch Linux (LTS)
+linux   /vmlinuz-linux-lts
+initrd  /amd-ucode.img
+initrd  /intel-ucode.img
+initrd  /initramfs-linux-lts.img
+options cryptdevice=UUID=${UUID}:cryptlvm root=/dev/mapper/vg1-root rw splash quiet
+EOF
+
+tee /mnt/boot/loader/entries/arch-lts-fallback.conf >/dev/null <<EOF
+title   Arch Linux (LTS, fallback)
+linux   /vmlinuz-linux-lts
+initrd  /amd-ucode.img
+initrd  /intel-ucode.img
+initrd  /initramfs-linux-lts-fallback.img
+options cryptdevice=UUID=${UUID}:cryptlvm root=/dev/mapper/vg1-root rw splash quiet
+EOF
+
+# Configure pacman
+sed -i 's/^#\(ParallelDownloads\).*$/\1 = 5/' /mnt/etc/pacman.conf
+sed -i 's/^#Color/Color/' /mnt/etc/pacman.conf
+# sed -i 's/^#\[multilib\]/\[multilib\]/' /mnt/etc/pacman.conf
+
+# Configure makepkg
+sed -i 's/^#\(MAKEFLAGS\).*$/\1="--jobs \$\(nproc\)"/' /mnt/etc/makepkg.conf
+
+# Setup nano as default text editor
+echo EDITOR=nano >> /mnt/etc/environment
+
+set +x
+
+echo "Setting a password for ${INSTALL_USERNAME}"
+
+echo "Done installing Arch Linux!"
