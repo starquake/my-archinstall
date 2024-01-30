@@ -64,7 +64,7 @@ swapon -L swap
 
 # Start installing all the things
 pacstrap -K /mnt \
-  base linux-lts linux-firmware intel-ucode amd-ucode kernel-modules-hook \
+  base linux-lts linux-firmware intel-ucode amd-ucode kernel-modules-hook terminus-font \
   mesa \
   vulkan-intel intel-media-driver \
   vulkan-radeon libva-mesa-driver mesa-vdpau \
@@ -85,12 +85,12 @@ nl_NL.UTF-8 UTF-8
 EOF
 arch-chroot /mnt locale-gen
 echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
-
+echo "FONT=ter-132b" >> /mnt/etc/vconsole.conf
 # Set hostname
 echo $INSTALL_HOSTNAME >/mnt/etc/hostname
 
 # Configure and run mkinitcpio
-sed -i 's/^HOOKS=(\(.*\))$/HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck plymouth)/' /mnt/etc/mkinitcpio.conf
+sed -i 's/^HOOKS=(\(.*\))$/HOOKS=(base systemd autodetect modconf kms keyboard sd-vconsole block sd-encrypt lvm2 filesystems fsck plymouth)/' /mnt/etc/mkinitcpio.conf
 arch-chroot /mnt mkinitcpio -P
 
 # Add the first user
@@ -131,7 +131,7 @@ linux   /vmlinuz-linux-lts
 initrd  /amd-ucode.img
 initrd  /intel-ucode.img
 initrd  /initramfs-linux-lts.img
-options cryptdevice=UUID=${UUID}:cryptlvm root=/dev/mapper/vg1-root rw splash quiet
+options rd.luks.name=${UUID}=cryptlvm root=/dev/mapper/vg1-root rw splash quiet
 EOF
 
 tee /mnt/boot/loader/entries/arch-lts-fallback.conf >/dev/null <<EOF
@@ -140,7 +140,7 @@ linux   /vmlinuz-linux-lts
 initrd  /amd-ucode.img
 initrd  /intel-ucode.img
 initrd  /initramfs-linux-lts-fallback.img
-options cryptdevice=UUID=${UUID}:cryptlvm root=/dev/mapper/vg1-root rw splash quiet
+options rd.luks.name=${UUID}=cryptlvm root=/dev/mapper/vg1-root rw splash quiet
 EOF
 
 # Configure pacman
