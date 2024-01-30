@@ -72,7 +72,7 @@ pacstrap -K /mnt \
   base-devel git 
 
 # Generate fstab
-arch-chroot /mnt genfstab -L /mnt >>/mnt/etc/fstab
+genfstab -L /mnt >>/mnt/etc/fstab
 
 # Configure Time-related settings
 arch-chroot /mnt ln -sf /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime
