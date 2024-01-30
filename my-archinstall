@@ -158,5 +158,6 @@ echo EDITOR=nano >> /mnt/etc/environment
 set +x
 
 echo "Setting a password for ${INSTALL_USERNAME}"
+arch-chroot /mnt passwd ${INSTALL_USERNAME}
 
 echo "Done installing Arch Linux!"
