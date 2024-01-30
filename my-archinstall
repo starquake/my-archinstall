@@ -72,7 +72,7 @@ pacstrap -K /mnt \
   base-devel git 
 
 # Generate fstab
-genfstab -L /mnt >>/mnt/etc/fstab
+arch-chroot /mnt genfstab -L /mnt >>/mnt/etc/fstab
 
 # Configure Time-related settings
 arch-chroot /mnt ln -sf /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime
@@ -85,6 +85,7 @@ nl_NL.UTF-8 UTF-8
 EOF
 arch-chroot /mnt locale-gen
 echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
+echo "KEYMAP=us" >> /mnt/etc/vconsole.conf
 echo "FONT=ter-132b" >> /mnt/etc/vconsole.conf
 # Set hostname
 echo $INSTALL_HOSTNAME >/mnt/etc/hostname
