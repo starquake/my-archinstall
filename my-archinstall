@@ -114,7 +114,7 @@ UUID=$(blkid -s UUID -o value "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2")
 arch-chroot /mnt bootctl install
 
 # Enable systemd-boot update service
-arch-chroot /mnt systemctl enable systemd-boot-update.service
+# arch-chroot /mnt systemctl enable systemd-boot-update.service
 
 # Enable some more services
 arch-chroot /mnt systemctl enable gdm
