@@ -26,9 +26,6 @@ parted --script --align=optimal "/dev/$INSTALL_DISK" -- \
     set 1 esp on \
     mkpart primary ext4 1G 100%
 
-# Formatting partition 1 for EFI FAT
-mkfs.fat -F 32 -n boot "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}1"
-
 # Setup encryption on partition 2:
 cryptsetup luksFormat "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2"
 
@@ -48,19 +45,22 @@ lvcreate -L ${INSTALL_SWAP_SIZE} vg1 -n swap
 lvcreate -l 100%FREE vg1 -n root
 
 # Setup volume 1 to be used for swap
-mkswap -L swap "/dev/vg1/swap"
+mkswap "/dev/vg1/swap"
 
 # Formatting volume 2 for ext4 root
 mkfs.ext4 "/dev/vg1/root"
 
 # Mount all the filesystems
 mount /dev/vg1/root /mnt
-mount -L boot --mkdir /mnt/boot
-swapon -L swap
+swapon "/dev/vg1/swap"
+
+# Formatting partition 1 for EFI FAT
+mkfs.fat -F 32 "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}1"
+mount --mkdir "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}1" /mnt/boot
 
 ## Speed up downloading of pacstrap and enable colors
-#sed -i 's/^#\(ParallelDownloads\).*$/\1 = 5/' /etc/pacman.conf
-#sed -i 's/^#Color/Color/' /etc/pacman.conf
+sed -i 's/^#\(ParallelDownloads\).*$/\1 = 5/' /etc/pacman.conf
+sed -i 's/^#Color/Color/' /etc/pacman.conf
 
 # Start installing all the things
 pacstrap -K /mnt \
@@ -72,7 +72,7 @@ pacstrap -K /mnt \
   base-devel git 
 
 # Generate fstab
-genfstab -L /mnt >>/mnt/etc/fstab
+genfstab -U /mnt >>/mnt/etc/fstab
 
 # Configure Time-related settings
 arch-chroot /mnt ln -sf /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime
@@ -132,7 +132,7 @@ linux   /vmlinuz-linux-lts
 initrd  /amd-ucode.img
 initrd  /intel-ucode.img
 initrd  /initramfs-linux-lts.img
-options rd.luks.name=${UUID}=cryptlvm root=/dev/mapper/vg1-root rw splash quiet
+options rd.luks.name=${UUID}=cryptlvm root=/dev/vg1/root rw splash quiet
 EOF
 
 tee /mnt/boot/loader/entries/arch-lts-fallback.conf >/dev/null <<EOF
@@ -141,7 +141,7 @@ linux   /vmlinuz-linux-lts
 initrd  /amd-ucode.img
 initrd  /intel-ucode.img
 initrd  /initramfs-linux-lts-fallback.img
-options rd.luks.name=${UUID}=cryptlvm root=/dev/mapper/vg1-root rw splash quiet
+options rd.luks.name=${UUID}=cryptlvm root=/dev/vg1/root rw splash quiet
 EOF
 
 # Configure pacman
