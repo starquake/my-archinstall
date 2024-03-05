@@ -91,7 +91,7 @@ echo "FONT=ter-132b" >> /mnt/etc/vconsole.conf
 echo $INSTALL_HOSTNAME >/mnt/etc/hostname
 
 # Configure and run mkinitcpio
-sed -i 's/^HOOKS=(\(.*\))$/HOOKS=(base systemd autodetect modconf kms keyboard sd-vconsole block sd-encrypt lvm2 filesystems fsck plymouth)/' /mnt/etc/mkinitcpio.conf
+sed -i 's/^HOOKS=(\(.*\))$/HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt lvm2 filesystems fsck plymouth)/' /mnt/etc/mkinitcpio.conf
 arch-chroot /mnt mkinitcpio -P
 
 # Add the first user
@@ -129,8 +129,6 @@ EOF
 tee /mnt/boot/loader/entries/arch-lts.conf >/dev/null <<EOF
 title   Arch Linux (LTS)
 linux   /vmlinuz-linux-lts
-initrd  /amd-ucode.img
-initrd  /intel-ucode.img
 initrd  /initramfs-linux-lts.img
 options rd.luks.name=${UUID}=cryptlvm root=/dev/vg1/root rw splash quiet
 EOF
@@ -138,8 +136,6 @@ EOF
 tee /mnt/boot/loader/entries/arch-lts-fallback.conf >/dev/null <<EOF
 title   Arch Linux (LTS, fallback)
 linux   /vmlinuz-linux-lts
-initrd  /amd-ucode.img
-initrd  /intel-ucode.img
 initrd  /initramfs-linux-lts-fallback.img
 options rd.luks.name=${UUID}=cryptlvm root=/dev/vg1/root rw splash quiet
 EOF
