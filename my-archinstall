@@ -148,8 +148,8 @@ sed -i 's/^#Color/Color/' /mnt/etc/pacman.conf
 # Configure makepkg
 sed -i 's/^#\(MAKEFLAGS\).*$/\1="--jobs \$\(nproc\)"/' /mnt/etc/makepkg.conf
 sed -i 's/^\(OPTIONS\).*$/\1=\(strip docs !libtool !staticlibs emptydirs zipman purge !debug lto\)/' /mnt/etc/makepkg.conf
-sed -i 's/^\(PKGEXT\).*$/\1=\'pkg.tar\'/' /mnt/etc/makepkg.conf
-sed -i 's/^\(SRCEXT\).*$/\1=\'pkg.tar\'/' /mnt/etc/makepkg.conf
+sed -i 's/^\(PKGEXT\).*$/\1='\''pkg.tar'\''/' /mnt/etc/makepkg.conf
+sed -i 's/^\(SRCEXT\).*$/\1='\''src.tar'\''/' /mnt/etc/makepkg.conf
 
 # Setup nano as default text editor
 echo EDITOR=nano >> /mnt/etc/environment
