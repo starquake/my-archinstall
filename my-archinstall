@@ -64,7 +64,7 @@ sed -i 's/^#Color/Color/' /etc/pacman.conf
 
 # Start installing all the things
 pacstrap -K /mnt \
-  base linux-lts linux-firmware intel-ucode amd-ucode kernel-modules-hook terminus-font \
+  base linux-lts linux-firmware lvm2 intel-ucode amd-ucode kernel-modules-hook terminus-font \
   mesa \
   vulkan-intel intel-media-driver \
   vulkan-radeon libva-mesa-driver mesa-vdpau \
