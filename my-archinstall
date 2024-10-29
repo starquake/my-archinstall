@@ -64,7 +64,7 @@ sed -i 's/^#Color/Color/' /etc/pacman.conf
 
 # Start installing all the things
 pacstrap -K /mnt \
-  base linux-lts linux-firmware lvm2 intel-ucode amd-ucode kernel-modules-hook terminus-font \
+  base linux linux-lts linux-firmware lvm2 intel-ucode amd-ucode kernel-modules-hook terminus-font \
   mesa \
   vulkan-intel intel-media-driver \
   vulkan-radeon libva-mesa-driver mesa-vdpau \
@@ -122,8 +122,22 @@ arch-chroot /mnt systemctl enable NetworkManager
 arch-chroot /mnt systemctl enable fstrim.timer
 
 tee /mnt/boot/loader/loader.conf >/dev/null <<EOF
-default  arch-lts.conf
+default  arch.conf
 # timeout  0
+EOF
+
+tee /mnt/boot/loader/entries/arch.conf >/dev/null <<EOF
+title   Arch Linux
+linux   /vmlinuz-linux
+initrd  /initramfs-linux.img
+options rd.luks.name=${UUID}=cryptlvm root=/dev/vg1/root rw splash quiet
+EOF
+
+tee /mnt/boot/loader/entries/arch-fallback.conf >/dev/null <<EOF
+title   Arch Linux (fallback)
+linux   /vmlinuz-linux
+initrd  /initramfs-linux-fallback.img
+options rd.luks.name=${UUID}=cryptlvm root=/dev/vg1/root rw splash quiet
 EOF
 
 tee /mnt/boot/loader/entries/arch-lts.conf >/dev/null <<EOF
@@ -158,5 +172,8 @@ set +x
 
 echo "Setting a password for ${INSTALL_USERNAME}"
 arch-chroot /mnt passwd ${INSTALL_USERNAME}
+
+echo "Copying my-archinstall script to /root/my-archinstall.save"
+cp $0 /mnt/root/my-archinstall.save
 
 echo "Done installing Arch Linux!"
