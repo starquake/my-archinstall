@@ -36,23 +36,23 @@ cryptsetup open "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2" cryptlvm
 pvcreate /dev/mapper/cryptlvm
 
 # Create VolumeGroup
-vgcreate vg1 /dev/mapper/cryptlvm
+vgcreate vg_os /dev/mapper/cryptlvm
 
 # Create Logical Volume swap
-lvcreate -L ${INSTALL_SWAP_SIZE} vg1 -n swap
+lvcreate -L ${INSTALL_SWAP_SIZE} vg_os -n swap
 
 # Create Logical Volume root
-lvcreate -l 100%FREE vg1 -n root
+lvcreate -l 100%FREE vg_os -n root
 
 # Setup volume 1 to be used for swap
-mkswap "/dev/vg1/swap"
+mkswap "/dev/vg_os/swap"
 
 # Formatting volume 2 for ext4 root
-mkfs.ext4 "/dev/vg1/root"
+mkfs.ext4 "/dev/vg_os/root"
 
 # Mount all the filesystems
-mount /dev/vg1/root /mnt
-swapon "/dev/vg1/swap"
+mount /dev/vg_os/root /mnt
+swapon "/dev/vg_os/swap"
 
 # Formatting partition 1 for EFI FAT
 mkfs.fat -F 32 "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}1"
@@ -130,28 +130,28 @@ tee /mnt/boot/loader/entries/arch.conf >/dev/null <<EOF
 title   Arch Linux
 linux   /vmlinuz-linux
 initrd  /initramfs-linux.img
-options rd.luks.name=${UUID}=cryptlvm root=/dev/vg1/root rw splash quiet
+options rd.luks.name=${UUID}=cryptlvm root=/dev/vg_os/root rw splash quiet
 EOF
 
 tee /mnt/boot/loader/entries/arch-fallback.conf >/dev/null <<EOF
 title   Arch Linux (fallback)
 linux   /vmlinuz-linux
 initrd  /initramfs-linux-fallback.img
-options rd.luks.name=${UUID}=cryptlvm root=/dev/vg1/root rw splash quiet
+options rd.luks.name=${UUID}=cryptlvm root=/dev/vg_os/root rw splash quiet
 EOF
 
 tee /mnt/boot/loader/entries/arch-lts.conf >/dev/null <<EOF
 title   Arch Linux (LTS)
 linux   /vmlinuz-linux-lts
 initrd  /initramfs-linux-lts.img
-options rd.luks.name=${UUID}=cryptlvm root=/dev/vg1/root rw splash quiet
+options rd.luks.name=${UUID}=cryptlvm root=/dev/vg_os/root rw splash quiet
 EOF
 
 tee /mnt/boot/loader/entries/arch-lts-fallback.conf >/dev/null <<EOF
 title   Arch Linux (LTS, fallback)
 linux   /vmlinuz-linux-lts
 initrd  /initramfs-linux-lts-fallback.img
-options rd.luks.name=${UUID}=cryptlvm root=/dev/vg1/root rw splash quiet
+options rd.luks.name=${UUID}=cryptlvm root=/dev/vg_os/root rw splash quiet
 EOF
 
 # Configure pacman
