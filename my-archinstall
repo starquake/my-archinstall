@@ -30,7 +30,7 @@ parted --script --align=optimal "/dev/$INSTALL_DISK" -- \
 cryptsetup luksFormat "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2"
 
 # Open the container:
-cryptsetup open "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2" cryptlvm
+cryptsetup --allow-discards --persistent open "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2" cryptlvm
 
 # Create Physical Volume
 pvcreate /dev/mapper/cryptlvm
