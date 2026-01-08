@@ -2,7 +2,9 @@
 # My Automated Arch Install
 # Run this script using:
 #
-#    /bin/bash -c "$(curl -fsSL https://install.linuxeverywhere.org/my-archinstall)"
+# Download, edit and run this script using:
+#
+#    curl -fsSL https://install.linuxeverywhere.org/my-archinstall
 
 # Settings
 INSTALL_DISK=vda
