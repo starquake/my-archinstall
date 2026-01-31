@@ -16,7 +16,7 @@ INSTALL_USERNAME=starquake
 # Check for root
 if [ "$EUID" -ne 0 ]; then
     echo "Please run as root"
-    exit
+    exit 1
 fi
 
 # Exit when any command fails
@@ -69,6 +69,13 @@ mount --mkdir "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}1" /mnt/boot
 sed -i 's/^#\(ParallelDownloads\).*$/\1 = 5/' /etc/pacman.conf
 sed -i 's/^#Color/Color/' /etc/pacman.conf
 
+# Check network connectivity
+echo "Checking network connectivity..."
+if ! curl -sf --connect-timeout 5 "https://archlinux.org" >/dev/null 2>&1; then
+    echo "ERROR: No network connectivity. Please configure your network first."
+    exit 1
+fi
+
 # Start installing all the things
 pacstrap -K /mnt \
   base linux linux-lts linux-firmware lvm2 intel-ucode amd-ucode kernel-modules-hook terminus-font \
@@ -76,7 +83,7 @@ pacstrap -K /mnt \
   vulkan-intel intel-media-driver \
   vulkan-radeon libva-mesa-driver mesa-vdpau \
   nano sudo gnome gnome-themes-extra gnome-tweaks plymouth networkmanager \
-  base-devel git 
+  base-devel git
 
 # Generate fstab
 genfstab -U /mnt >>/mnt/etc/fstab
@@ -95,14 +102,14 @@ echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
 echo "KEYMAP=us" >> /mnt/etc/vconsole.conf
 echo "FONT=ter-132b" >> /mnt/etc/vconsole.conf
 # Set hostname
-echo $INSTALL_HOSTNAME >/mnt/etc/hostname
+echo "$INSTALL_HOSTNAME" >/mnt/etc/hostname
 
 # Configure and run mkinitcpio
 sed -i 's/^HOOKS=(\(.*\))$/HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt lvm2 filesystems fsck plymouth)/' /mnt/etc/mkinitcpio.conf
 arch-chroot /mnt mkinitcpio -P
 
 # Add the first user
-arch-chroot /mnt useradd -m -G wheel ${INSTALL_USERNAME}
+arch-chroot /mnt useradd -m -G wheel "${INSTALL_USERNAME}"
 
 # Allow members of group wheel to execute any command
 tee /mnt/etc/sudoers.d/allow_wheel_group >/dev/null <<EOF
@@ -120,13 +127,12 @@ UUID=$(blkid -s UUID -o value "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2")
 # Install systemd-boot loader
 arch-chroot /mnt bootctl install
 
-# Enable systemd-boot update service
-arch-chroot /mnt systemctl enable systemd-boot-update.service
-
-# Enable some more services
-arch-chroot /mnt systemctl enable gdm
-arch-chroot /mnt systemctl enable NetworkManager
-arch-chroot /mnt systemctl enable fstrim.timer
+# Enable services
+arch-chroot /mnt systemctl enable \
+    systemd-boot-update.service \
+    gdm \
+    NetworkManager \
+    fstrim.timer
 
 tee /mnt/boot/loader/loader.conf >/dev/null <<EOF
 default  arch.conf
@@ -178,7 +184,10 @@ echo EDITOR=nano >> /mnt/etc/environment
 set +x
 
 echo "Setting a password for ${INSTALL_USERNAME}"
-arch-chroot /mnt passwd ${INSTALL_USERNAME}
+arch-chroot /mnt passwd "${INSTALL_USERNAME}"
+
+echo "Locking root account (use sudo for administrative tasks)"
+arch-chroot /mnt passwd -l root
 
 echo "Copying my-archinstall script to /root/my-archinstall.save"
 cp $0 /mnt/root/my-archinstall.save
