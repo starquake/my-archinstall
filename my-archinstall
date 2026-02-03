@@ -57,12 +57,18 @@ fi
 
 # Start installing all the things
 pacstrap -K /mnt \
-  base linux linux-lts linux-firmware intel-ucode amd-ucode kernel-modules-hook terminus-font \
+  base linux linux-lts linux-firmware intel-ucode amd-ucode kernel-modules-hook terminus-font zram-generator \
   mesa \
   vulkan-intel intel-media-driver \
   vulkan-radeon libva-mesa-driver \
   nano sudo gnome gnome-themes-extra gnome-tweaks plymouth networkmanager \
   base-devel git
+
+# Configure zram-generator
+tee /mnt/etc/systemd/zram-generator.conf >/dev/null <<EOF
+[zram0]
+zram-size = min(ram / 2, 16384)
+EOF
 
 # Generate fstab
 genfstab -U /mnt >>/mnt/etc/fstab
@@ -86,7 +92,6 @@ echo "FONT=ter-132b" >> /mnt/etc/vconsole.conf
 echo "$INSTALL_HOSTNAME" >/mnt/etc/hostname
 
 UUID=$(blkid -s UUID -o value "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2")
-
 
 echo "rd.luks.name=${UUID}=root root=/dev/mapper/root rw splash quiet" > /mnt/etc/kernel/cmdline
 
@@ -173,5 +178,6 @@ arch-chroot /mnt passwd -l root
 
 echo "Copying my-archinstall script to /home/${INSTALL_USERNAME}/my-archinstall.save"
 cp "$0" "/mnt/home/${INSTALL_USERNAME}/my-archinstall.save"
+arch-chroot /mnt chown "${INSTALL_USERNAME}:${INSTALL_USERNAME}" "/home/${INSTALL_USERNAME}/my-archinstall.save"
 
 echo "Done installing Arch Linux!"
