@@ -166,7 +166,8 @@ sed -i 's/^\(PKGEXT\).*$/\1='\''.pkg.tar'\''/' /mnt/etc/makepkg.conf
 sed -i 's/^\(SRCEXT\).*$/\1='\''.src.tar'\''/' /mnt/etc/makepkg.conf
 
 # Setup nano as default text editor
-echo EDITOR=nano >> /mnt/etc/environment
+echo "ELECTRON_OZONE_PLATFORM_HINT=auto" >> /mnt/etc/environment
+echo "EDITOR=nano" >> /mnt/etc/environment
 
 set +x
 
