@@ -38,7 +38,6 @@ cryptsetup \
     --persistent \
     open "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2" root
 
-
 # Formatting volume 2 for ext4 root
 mkfs.ext4 "/dev/mapper/root"
 
@@ -77,16 +76,57 @@ tee /mnt/etc/locale.gen >/dev/null <<EOF
 en_US.UTF-8 UTF-8
 nl_NL.UTF-8 UTF-8
 EOF
+
 arch-chroot /mnt locale-gen
+
 echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
 echo "KEYMAP=us" >> /mnt/etc/vconsole.conf
 echo "FONT=ter-132b" >> /mnt/etc/vconsole.conf
 # Set hostname
 echo "$INSTALL_HOSTNAME" >/mnt/etc/hostname
 
+UUID=$(blkid -s UUID -o value "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2")
+
+
+echo "rd.luks.name=${UUID}=root root=/dev/mapper/root rw splash quiet" > /mnt/etc/kernel/cmdline
+
 # Configure and run mkinitcpio
+
+tee /mnt/etc/mkinitcpio.d/linux.preset >/dev/null <<EOF
+ALL_kver="/boot/vmlinuz-linux"
+ALL_microcode=(/boot/*-ucode.img)
+
+PRESETS=('default' 'fallback')
+
+default_uki="/boot/EFI/Linux/arch-linux.efi"
+
+fallback_uki="/boot/EFI/Linux/arch-linux-fallback.efi"
+fallback_options="-S autodetect"
+EOF
+
+tee /mnt/etc/mkinitcpio.d/linux-lts.preset >/dev/null <<EOF
+ALL_kver="/boot/vmlinuz-linux-lts"
+ALL_microcode=(/boot/*-ucode.img)
+
+PRESETS=('default' 'fallback')
+
+default_uki="/boot/EFI/Linux/arch-linux-lts.efi"
+
+fallback_uki="/boot/EFI/Linux/arch-linux-lts-fallback.efi"
+fallback_options="-S autodetect"
+EOF
+
+mkdir -p /mnt/boot/EFI/Linux
 sed -i 's/^HOOKS=(\(.*\))$/HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole block plymouth sd-encrypt filesystems fsck)/' /mnt/etc/mkinitcpio.conf
 arch-chroot /mnt mkinitcpio -P
+
+# Install systemd-boot loader
+arch-chroot /mnt bootctl install
+
+tee /mnt/boot/loader/loader.conf >/dev/null <<EOF
+timeout 3
+console-mode auto
+EOF
 
 # Add the first user
 arch-chroot /mnt useradd -m -G wheel "${INSTALL_USERNAME}"
@@ -102,50 +142,12 @@ tee /mnt/etc/sudoers.d/ssh_auth_sock >/dev/null <<EOF
 Defaults env_keep+=SSH_AUTH_SOCK
 EOF
 
-UUID=$(blkid -s UUID -o value "/dev/${INSTALL_DISK}${INSTALL_PART_PREFIX}2")
-
-# Install systemd-boot loader
-arch-chroot /mnt bootctl install
-
 # Enable services
 arch-chroot /mnt systemctl enable \
     systemd-boot-update.service \
     gdm \
     NetworkManager \
     fstrim.timer
-
-tee /mnt/boot/loader/loader.conf >/dev/null <<EOF
-default  arch.conf
-# timeout  0
-EOF
-
-tee /mnt/boot/loader/entries/arch.conf >/dev/null <<EOF
-title   Arch Linux
-linux   /vmlinuz-linux
-initrd  /initramfs-linux.img
-options rd.luks.name=${UUID}=root root=/dev/mapper/root rw splash quiet
-EOF
-
-tee /mnt/boot/loader/entries/arch-fallback.conf >/dev/null <<EOF
-title   Arch Linux (fallback)
-linux   /vmlinuz-linux
-initrd  /initramfs-linux-fallback.img
-options rd.luks.name=${UUID}=root root=/dev/mapper/root rw splash quiet
-EOF
-
-tee /mnt/boot/loader/entries/arch-lts.conf >/dev/null <<EOF
-title   Arch Linux (LTS)
-linux   /vmlinuz-linux-lts
-initrd  /initramfs-linux-lts.img
-options rd.luks.name=${UUID}=root root=/dev/mapper/root rw splash quiet
-EOF
-
-tee /mnt/boot/loader/entries/arch-lts-fallback.conf >/dev/null <<EOF
-title   Arch Linux (LTS, fallback)
-linux   /vmlinuz-linux-lts
-initrd  /initramfs-linux-lts-fallback.img
-options rd.luks.name=${UUID}=root root=/dev/mapper/root rw splash quiet
-EOF
 
 # Configure pacman
 sed -i 's/^#\(ParallelDownloads\).*$/\1 = 5/' /mnt/etc/pacman.conf
@@ -169,7 +171,7 @@ arch-chroot /mnt passwd "${INSTALL_USERNAME}"
 echo "Locking root account (use sudo for administrative tasks)"
 arch-chroot /mnt passwd -l root
 
-echo "Copying my-archinstall script to /root/my-archinstall.save"
-cp $0 /mnt/root/my-archinstall.save
+echo "Copying my-archinstall script to /home/${INSTALL_USERNAME}/my-archinstall.save"
+cp "$0" "/mnt/home/${INSTALL_USERNAME}/my-archinstall.save"
 
 echo "Done installing Arch Linux!"
