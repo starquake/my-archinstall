@@ -60,7 +60,7 @@ pacstrap -K /mnt \
   base linux linux-lts linux-firmware intel-ucode amd-ucode kernel-modules-hook terminus-font \
   mesa \
   vulkan-intel intel-media-driver \
-  vulkan-radeon libva-mesa-driver mesa-vdpau \
+  vulkan-radeon libva-mesa-driver \
   nano sudo gnome gnome-themes-extra gnome-tweaks plymouth networkmanager \
   base-devel git
 
