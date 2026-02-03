@@ -57,7 +57,7 @@ fi
 
 # Start installing all the things
 pacstrap -K /mnt \
-  base linux linux-lts linux-firmware intel-ucode amd-ucode kernel-modules-hook terminus-font zram-generator \
+  base linux linux-lts linux-firmware intel-ucode amd-ucode kernel-modules-hook terminus-font zram-generator tuned tuned-ppd \
   mesa \
   vulkan-intel intel-media-driver \
   vulkan-radeon libva-mesa-driver \
@@ -150,6 +150,7 @@ EOF
 # Enable services
 arch-chroot /mnt systemctl enable \
     systemd-boot-update.service \
+    tuned tuned-ppd \
     gdm \
     NetworkManager \
     fstrim.timer
