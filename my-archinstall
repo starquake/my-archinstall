@@ -62,6 +62,7 @@ pacstrap -K /mnt \
   vulkan-intel intel-media-driver \
   vulkan-radeon libva-mesa-driver \
   nano sudo gnome gnome-themes-extra gnome-tweaks plymouth networkmanager \
+  noto-fonts noto-fonts-emoji noto-fonts-cjk ttf-croscore ttf-adwaitamono-nerd \
   base-devel git
 
 # Configure zram-generator
