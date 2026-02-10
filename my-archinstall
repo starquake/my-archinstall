@@ -100,7 +100,6 @@ echo "rd.luks.name=${UUID}=root root=/dev/mapper/root rw splash quiet" > /mnt/et
 
 tee /mnt/etc/mkinitcpio.d/linux.preset >/dev/null <<EOF
 ALL_kver="/boot/vmlinuz-linux"
-ALL_microcode=(/boot/*-ucode.img)
 
 PRESETS=('default' 'fallback')
 
@@ -112,7 +111,6 @@ EOF
 
 tee /mnt/etc/mkinitcpio.d/linux-lts.preset >/dev/null <<EOF
 ALL_kver="/boot/vmlinuz-linux-lts"
-ALL_microcode=(/boot/*-ucode.img)
 
 PRESETS=('default' 'fallback')
 
